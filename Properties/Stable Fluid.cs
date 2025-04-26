@@ -339,8 +339,10 @@ namespace StableShape.Properties
             return density;
         }
 
-        public void DrawVector(List<Line> lns)
+        public List<Line> DrawVector()
         {
+            List<Line> lns = new List<Line>();
+
             for (int i = 0; i < sizeX; i++)
             {
                 for (int j = 0; j < sizeY; j++)
@@ -353,6 +355,305 @@ namespace StableShape.Properties
                     }
                 }
             }
+            return lns;
+        }
+
+        public int Clamp(int a, int b, int c)
+        {
+            if (a < b) return b;
+            if (a > c) return c;
+            return a;
+        }
+    }
+
+    public class StableFluid2D
+    {
+        private int sizeX;
+        private int sizeY;
+
+        private Mesh mesh;
+
+        // use 2d array to store the field
+        private double[,] u;      // X 
+        private double[,] v;      // Y
+        private double[,] u_prev;
+        private double[,] v_prev;
+        private double[,] density;
+        private double[,] density_prev;
+
+        // fluid parameters
+        private double dt;  // delta time
+        private double diff; // diffusion rate
+        private double visc; // viscosity
+
+        public StableFluid2D(int width, int height, double dt = 0.1, double diff = 0.0001, double visc = 0.0001)
+        {
+            sizeX = width;
+            sizeY = height;
+
+            // initialize the 2d array
+            u = new double[sizeX, sizeY];
+            v = new double[sizeX, sizeY];
+            u_prev = new double[sizeX, sizeY];
+            v_prev = new double[sizeX, sizeY];
+            density = new double[sizeX, sizeY];
+            density_prev = new double[sizeX, sizeY];
+
+            this.dt = dt;
+            this.diff = diff;
+            this.visc = visc;
+        }
+
+        //////////////
+        public void AddForce(IList<Line> forces)
+        {
+            foreach (var f in forces)
+            {
+                double deltau = f.ToX - f.FromX;
+                double deltav = f.ToY - f.FromY;
+
+                AddVelocity((int)f.FromX, (int)f.FromY, deltau, deltav);
+            }
+        }
+        public void AddDot(IList<Point3d> dots, double amount)
+        {
+            foreach (var d in dots)
+            {
+                AddDensity((int)d.X, (int)d.Y, amount);
+            }
+        }
+        public void AddVelocity(int x, int y, double amountX, double amountY)
+        {
+            int i = Clamp(x, 1, sizeX - 2);
+            int j = Clamp(y, 1, sizeY - 2);
+
+            u[i, j] += amountX;
+            v[i, j] += amountY;
+        }
+
+        public void AddDensity(int x, int y, double amount)
+        {
+            int i = Clamp(x, 1, sizeX - 2);
+            int j = Clamp(y, 1, sizeY - 2);
+
+            density[i, j] += amount;
+        }
+
+        private void SetBoundary(int typeIndex, double[,] f)
+        {
+            for (int i = 1; i < sizeX - 1; i++)
+            {
+                //when the typeIndex is 2, process the velocity on y direction
+                if (typeIndex == 2)
+                {
+                    f[i, 0] = -f[i, 1];
+                    f[i, sizeY - 1] = -f[i, sizeY - 2];
+                }
+                //other cases just set the boudary velociy to be the adjacent one (0 or 1)
+                else
+                {
+                    f[i, 0] = f[i, 1];
+                    f[i, sizeY - 1] = f[i, sizeY - 2];
+                }
+            }
+
+            for (int j = 1; j < sizeY - 1; j++)
+            {
+                //when the typeIndex is 1, process the velocity on x direction
+                if (typeIndex == 1)
+                {
+                    f[0, j] = -f[1, j];
+                    f[sizeX - 1, j] = -f[sizeX - 2, j];
+                }
+                //other cases just set the boudary velociy to be the adjacent one (0 or 2)
+                else
+                {
+                    f[0, j] = f[1, j];
+                    f[sizeX - 1, j] = f[sizeX - 2, j];
+                }
+            }
+
+            // Explicitly set the corner by average adjacent points
+            f[0, 0] = 0.5 * (f[1, 0] + f[0, 1]);
+            f[0, sizeY - 1] = 0.5 * (f[1, sizeY - 1] + f[0, sizeY - 2]);
+            f[sizeX - 1, 0] = 0.5 * (f[sizeX - 2, 0] + f[sizeX - 1, 1]);
+            f[sizeX - 1, sizeY - 1] = 0.5 * (f[sizeX - 2, sizeY - 1] + f[sizeX - 1, sizeY - 2]);
+        }
+
+        private void Diffuse(int typeIndex, double[,] f, double[,] f0, double rate)
+        {
+            double a = dt * rate * sizeX * sizeY;
+            for (int k = 0; k < 20; k++)
+            {
+                for (int i = 1; i < sizeX - 1; i++)
+                {
+                    for (int j = 1; j < sizeY - 1; j++)
+                    {
+                        f[i, j] = (f0[i, j] + a * (f[i - 1, j] + f[i + 1, j] +
+                                                f[i, j - 1] + f[i, j + 1])) / (1 + 4 * a);
+                    }
+                }
+                SetBoundary(typeIndex, f);
+            }
+        }
+
+        //Core Method
+        //This method is to advect the physics value through the velocity field
+        //d is the target array, d0 is the current array
+        private void Advect(int typeIndex, double[,] d, double[,] d0, double[,] u, double[,] v)
+        {
+            double dt0 = dt * sizeX;
+
+            for (int i = 1; i < sizeX - 1; i++)
+            {
+                for (int j = 1; j < sizeY - 1; j++)
+                {
+                    double x = i - dt0 * u[i, j];
+                    double y = j - dt0 * v[i, j];
+
+                    //ensure the point within the boundary
+                    x = Math.Max(0.5, Math.Min(sizeX - 1.5, x));
+                    y = Math.Max(0.5, Math.Min(sizeY - 1.5, y));
+
+                    //Find points surrounding
+                    int i0 = (int)x;
+                    int i1 = i0 + 1;
+                    int j0 = (int)y;
+                    int j1 = j0 + 1;
+
+                    //Calculate the interpolation weight
+                    double s1 = x - i0;
+                    double s0 = 1 - s1;
+                    double t1 = y - j0;
+                    double t0 = 1 - t1;
+
+                    // Get new value
+                    d[i, j] = s0 * (t0 * d0[i0, j0] + t1 * d0[i0, j1]) +
+                     s1 * (t0 * d0[i1, j0] + t1 * d0[i1, j1]);
+                }
+            }
+            SetBoundary(typeIndex, d);
+        }
+
+        //Project is to make sure there is no divergency in the velocity field
+        private void Project(double[,] u, double[,] v, double[,] p, double[,] div)
+        {
+            //calculate the div of velocity field
+            for (int i = 1; i < sizeX - 1; i++)
+            {
+                for (int j = 1; j < sizeY - 1; j++)
+                {
+                    div[i, j] = -0.5 * ((u[i + 1, j] - u[i - 1, j]) / sizeX +
+                                        (v[i, j + 1] - v[i, j - 1]) / sizeY);
+                    p[i, j] = 0;
+                }
+            }
+
+            SetBoundary(0, div);
+            SetBoundary(0, p);
+
+            //solve Poisson equation
+            for (int k = 0; k < 20; k++)
+            {
+                for (int i = 1; i < sizeX - 1; i++)
+                {
+                    for (int j = 1; j < sizeY - 1; j++)
+                    {
+                        p[i, j] = (div[i, j] + p[i - 1, j] + p[i + 1, j] + p[i, j - 1] + p[i, j + 1]) / 4;
+                    }
+                }
+            }
+            SetBoundary(0, p);
+
+            //Use the Force delta to adjust the velocity field
+            for (int i = 1; i < sizeX - 1; i++)
+            {
+                for (int j = 1; j < sizeY - 1; j++)
+                {
+                    u[i, j] -= 0.5 * sizeX * (p[i + 1, j] - p[i - 1, j]);
+                    v[i, j] -= 0.5 * sizeY * (p[i, j + 1] - p[i, j - 1]);
+                }
+            }
+            SetBoundary(1, u);
+            SetBoundary(2, v);
+        }
+
+        public void Update()
+        {
+            VelocityStep();
+            DensityStep();
+        }
+
+        private void VelocityStep()
+        {
+            // Swap velocity
+            Swap(ref u, ref u_prev);
+            Swap(ref v, ref v_prev);
+
+            Diffuse(1, u, u_prev, visc);
+            Diffuse(2, v, v_prev, visc);
+
+            // Project to make sure div is 0  
+            Project(u, v, u_prev, v_prev);
+
+            // Swap velocity
+            Swap(ref u, ref u_prev);
+            Swap(ref v, ref v_prev);
+
+            // Advect - fluid transit itself 
+            Advect(1, u, u_prev, u_prev, v_prev);
+            Advect(2, v, v_prev, u_prev, v_prev);
+
+            // Project to make sure div is 0   
+            Project(u, v, u_prev, v_prev);
+        }
+
+        private void DensityStep()
+        {
+            // Swap density
+            Swap(ref density, ref density_prev);
+
+            // diffuse  
+            Diffuse(0, density, density_prev, diff);
+
+            // Swap back
+            Swap(ref density, ref density_prev);
+
+            // Advect  
+            Advect(0, density, density_prev, u, v);
+        }
+
+        private void Swap(ref double[,] a, ref double[,] b)
+        {
+            double[,] temp = a;
+            a = b;
+            b = temp;
+        }
+
+        public double[,] GetDensity()
+        {
+            return density;
+        }
+
+        public Mesh GetMesh()
+        {
+            return mesh;
+        }
+
+        public List<Line> DrawVector()
+        {
+            List<Line> lines = new List<Line>();
+            Vector3d[,] vecs = new Vector3d[sizeX, sizeY];
+            for (int i = 0; i < sizeX; i++)
+            {
+                for (int j = 0; j < sizeY; j++)
+                {
+                    vecs[i, j] = new Vector3d(u[i, j], v[i, j], 0);
+                    Line ln = new Line(new Point3d(i, j, 0), vecs[i, j]);
+                    lines.Add(ln);
+                }
+            }
+            return lines;
         }
 
         public int Clamp(int a, int b, int c)

@@ -4,15 +4,14 @@ using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using StableShape.Properties;
 
-namespace StableShape
+namespace StableShape.Properties
 {
-    public class StableShapeComponent : GH_Component
+    public class StableSolver2D : GH_Component
     {
         //static variables
         private static bool init = true;
-        private static StableFluid3D sf3;
+        private static StableFluid2D sf2;
 
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -23,9 +22,9 @@ namespace StableShape
         /// </summary>
         /// 
 
-        public StableShapeComponent()
-          : base("StableFluidSolver", "StableFluidSolver",
-            "Main Solver for the Sable Fluid",
+        public StableSolver2D()
+          : base("StableFluidSolver2D", "StableFluidSolver2D",
+            "Main Solver for the Sable Fluid 2D",
             "StableShape", "Solver")
         {
         }
@@ -33,9 +32,9 @@ namespace StableShape
         /// <summary>
         /// Registers all the input parameters for this component.
         /// </summary>
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
-            pManager.AddIntegerParameter("Size3D", "Size3D", "An int list to store the size of grids.",GH_ParamAccess.list);
+            pManager.AddIntegerParameter("Size2D", "Size2D", "An int list to store the size of grids.", GH_ParamAccess.list);
             pManager.AddNumberParameter("Diffusion Rate", "Diffusion", "Diffusion Rate of Fluid", GH_ParamAccess.item, 0.0001);
             pManager.AddNumberParameter("Viscocity Rate", "Viscocity", "Viscocity Rate of Fluid", GH_ParamAccess.item, 0.0001);
             pManager.AddLineParameter("Forces", "Forces", "A list of lines represent the forces", GH_ParamAccess.list);
@@ -46,11 +45,10 @@ namespace StableShape
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddLineParameter("Display Lines", "Display Lines", "Lines to display the velocities", GH_ParamAccess.list);
             pManager.AddNumberParameter("Density Field", "Density Field", "A list of number represent the density field", GH_ParamAccess.list);
-            pManager.AddVectorParameter("Velocity Field", "Velocity Field", "A list of vectors represent the velocity field", GH_ParamAccess.list);
         }
 
         /// <summary>
@@ -79,23 +77,21 @@ namespace StableShape
             {
                 reset = false;
                 init = false;
-                sf3 = new StableFluid3D(size[0], size[1], size[2], 0.1, diffusion, viscocity);
+                sf2 = new StableFluid2D(size[0], size[1], 0.1, diffusion, viscocity);
                 if (dots.Count > 0)
                 {
-                    sf3.AddDot(dots, 10);
+                    sf2.AddDot(dots, 10);
                 }
             }
 
-            sf3.AddForce(forces);
-            sf3.Update();
+            sf2.AddForce(forces);
+            sf2.Update();
 
-            List<Line> lns = sf3.DrawVector();
-            double[,,] density = sf3.GetDensity();
-            Vector3d[,,] velocity = sf3.vecs;
+            List<Line> lns = sf2.DrawVector();
+            double[,] density = sf2.GetDensity();
 
             DA.SetDataList(0, lns);
             DA.SetDataList(1, density);
-            DA.SetDataList(2, velocity);
         }
 
         /// <summary>
@@ -104,13 +100,13 @@ namespace StableShape
         /// You can add image files to your project resources and access them like this:
         /// return Resources.IconForThisComponent;
         /// </summary>
-        protected override System.Drawing.Bitmap Icon => Resources.Fluid;
+        protected override System.Drawing.Bitmap Icon => Resources.Fluid2d;
 
         /// <summary>
         /// Each component must have a unique Guid to identify it. 
         /// It is vital this Guid doesn't change otherwise old ghx files 
         /// that use the old ID will partially fail during loading.
         /// </summary>
-        public override Guid ComponentGuid => new Guid("c3147c78-92f1-4669-b5eb-d8d215ff87cf");
+        public override Guid ComponentGuid => new Guid("809B7CAC-E9E4-4FD2-9FA9-69E2F7E203B0");
     }
 }
