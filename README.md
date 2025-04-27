@@ -7,3 +7,5 @@ This plugin contains the StableFluid core solver, a mesh processing solver, and 
 Use Trigger to continuously update velocity and density fields. The velocity field can be input into the grid solver to affect mesh vertices, simulating the effect of fluid impact on the mesh.
 
 Feel free to Twist your mesh!
+![image](https://github.com/user-attachments/assets/5b37b999-4fe1-4701-aaf8-f91962eeb861)
+![image](https://github.com/user-attachments/assets/2568324b-17d8-48d6-87bb-10b42b0785c0)
