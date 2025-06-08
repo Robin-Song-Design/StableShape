@@ -9,3 +9,8 @@ Use Trigger to continuously update velocity and density fields. The velocity fie
 Feel free to Twist your mesh!
 
 ![image](https://github.com/user-attachments/assets/5b37b999-4fe1-4701-aaf8-f91962eeb861)
+![StableShape](https://github.com/user-attachments/assets/c0082147-99e1-4a3d-8856-017578022414)
+![StableShape2](https://github.com/user-attachments/assets/cfce6dee-65e5-4ea6-8e28-d7619f5de81e)
+![StableShape3](https://github.com/user-attachments/assets/5a9667b2-4cf7-42d4-ae90-b059f2f87278)
+
+
