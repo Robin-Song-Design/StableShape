@@ -7,7 +7,7 @@
         Rhino 8 Windows: net48, net7.0, net7.0-windows, net7.0-windows10.0.22000.0, etc
         Rhino 8 Mac: net7.0, net7.0-macos, net7.0-macos12.0, etc
     -->
-    <TargetFrameworks>net7.0-windows;net7.0;net48</TargetFrameworks>
+    <TargetFrameworks>net7.0-windows;net7.0</TargetFrameworks>
     <EnableDynamicLoading>true</EnableDynamicLoading>
     <TargetExt>.gha</TargetExt>
     <NoWarn>NU1701;NETSDK1086</NoWarn>
@@ -16,15 +16,16 @@
   
   <PropertyGroup>
     <!-- Specifies information for Assembly and Yak -->
-    <Version>1.0</Version>
-    <Title>StableShape</Title>
+    <Version>2.0</Version>
+    <Title>StableShapeGPU</Title>
     <Company>StableShape Authors</Company>
-    <Description>Description of StableShape</Description>
+    <Description>GPU accelerated Stable Fluid simulation for Rhino 8</Description>
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Grasshopper" Version="7.0.20314.3001" Condition="$(TargetFramework) == 'net48'" ExcludeAssets="runtime" />
+    <PackageReference Include="ComputeSharp" Version="2.1.0" />
     <PackageReference Include="Grasshopper" Version="8.0.23304.9001" Condition="!$(TargetFramework.StartsWith('net4'))" ExcludeAssets="runtime" />
+	<PackageReference Include="CommunityToolkit.Mvvm" Version="8.2.2" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.4" />
     <PackageReference Include="System.Resources.Extensions" Version="9.0.4" />
   </ItemGroup>
@@ -68,39 +69,5 @@
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
   </ItemGroup>
-
-  <Target Name="CopyPdbForMonoDebugging" AfterTargets="AfterBuild">
-    <!-- Enable debugging in Rhino 6/7 on Mac -->
-    <Copy SourceFiles="$(TargetDir)$(TargetName).pdb" DestinationFiles="$(TargetDir)$(TargetName).gha.pdb" Condition="$([MSBuild]::IsOSPlatform(OSX)) and $(TargetFramework.StartsWith('net4')) and Exists('$(TargetDir)$(TargetName).pdb')" />
-  </Target>
-
-  <Target Name="BuildYakPackage" AfterTargets="DispatchToInnerBuilds">
-    <PropertyGroup>
-      <YakExecutable Condition="$(YakExecutable) == '' and $([MSBuild]::IsOSPlatform(windows)) and Exists('C:\Program Files\Rhino 8\System\Yak.exe')">C:\Program Files\Rhino 8\System\Yak.exe</YakExecutable>
-      <YakExecutable Condition="$(YakExecutable) == '' and $([MSBuild]::IsOSPlatform(macos)) and Exists('/Applications/Rhino 8.app/Contents/Resources/bin/yak')">/Applications/Rhino 8.app/Contents/Resources/bin/yak</YakExecutable>
-      
-      <BuildYakPackage Condition="$(BuildYakPackage) == '' and $(YakExecutable) != '' and Exists($(YakExecutable))">True</BuildYakPackage>
-    </PropertyGroup>
-    
-    <Warning Text="Could not find Yak executable" Condition="$(YakExecutable) == ''" />
-
-    <ItemGroup>
-      <YakPackagesToDelete Include="$(OutputPath)\*.yak;$(OutputPath)\**\manifest.yml" />
-    </ItemGroup>
-    
-    <Delete Files="@(YakPackagesToDelete)" />
-
-    <Exec Command="&quot;$(YakExecutable)&quot; spec" WorkingDirectory="$(OutputPath)" Condition="$(BuildYakPackage) == 'True'" />
-    <Exec Command="&quot;$(YakExecutable)&quot; build" WorkingDirectory="$(OutputPath)" Condition="$(BuildYakPackage) == 'True'" />
-
-    <!-- Rhino 7 -->
-    <Exec Command="&quot;$(YakExecutable)&quot; spec" WorkingDirectory="$(OutputPath)net48\" Condition="$(BuildYakPackage) == 'True'" />
-    <Exec Command="&quot;$(YakExecutable)&quot; build" WorkingDirectory="$(OutputPath)net48\" Condition="$(BuildYakPackage) == 'True'" />
-    
-    <ItemGroup>
-      <YakPackageToMove Include="$(BaseOutputPath)$(Configuration)\net48\*.yak" />
-    </ItemGroup>
-    <Move SourceFiles="@(YakPackageToMove)" DestinationFolder="$(BaseOutputPath)$(Configuration)\" Condition="$(BuildYakPackage) == 'True'" />
-  </Target>
 
 </Project>

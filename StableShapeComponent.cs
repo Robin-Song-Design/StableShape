@@ -13,6 +13,7 @@ namespace StableShape
         //static variables
         private static bool init = true;
         private static StableFluid3D sf3;
+        private static List<Line> lns = new List<Line>();
 
         /// <summary>
         /// Each implementation of GH_Component must provide a public 
@@ -70,8 +71,8 @@ namespace StableShape
             if (!DA.GetDataList(0, size)) return;
             DA.GetData(1, ref diffusion);
             DA.GetData(2, ref viscocity);
-            if (!DA.GetDataList(3, forces)) { forces = new List<Line>(); }
-            if (!DA.GetDataList(4, dots)) { dots = new List<Point3d>(); }
+            DA.GetDataList(3, forces);
+            DA.GetDataList(4, dots);
             DA.GetData(5, ref reset);
 
 
@@ -79,19 +80,27 @@ namespace StableShape
             {
                 reset = false;
                 init = false;
-                sf3 = new StableFluid3D(size[0], size[1], size[2], 0.1, diffusion, viscocity);
+                sf3 = new StableFluid3D(size[0], size[1], size[2], 0.1f, (float)diffusion, (float)viscocity);
                 if (dots.Count > 0)
                 {
-                    sf3.AddDot(dots, 10);
+                    sf3.AddDot(dots, 10f);
                 }
             }
+            if(lns.Count > 0)
+            {
+                lns.Clear();
+            }
 
-            sf3.AddForce(forces);
+            sf3.AddForces(forces);
             sf3.Update();
 
-            List<Line> lns = sf3.DrawVector();
-            double[,,] density = sf3.GetDensity();
-            Vector3d[,,] velocity = sf3.vecs;
+
+            if(Params.Output[0].Recipients.Count > 0)
+            {
+                List<Line> lns = sf3.DrawVector();
+            }
+            float[,,] density = sf3.GetDensity();
+            Vector3d[,,]velocity = sf3.GetVelocityField();
 
             DA.SetDataList(0, lns);
             DA.SetDataList(1, density);
