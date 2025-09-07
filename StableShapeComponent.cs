@@ -4,15 +4,16 @@ using Rhino.Geometry;
 using System;
 using System.Collections.Generic;
 using System.Net;
-using StableShape.Properties;
+using StableShapeGPU.Properties;
 
-namespace StableShape
+namespace StableShapeGPU
 {
     public class StableShapeComponent : GH_Component
     {
         //static variables
         private static bool init = true;
         private static StableFluid3D sf3;
+        private static GpuMeshSolver meshSolver;
         private static List<Line> lns = new List<Line>();
 
         /// <summary>
@@ -27,7 +28,7 @@ namespace StableShape
         public StableShapeComponent()
           : base("StableFluidSolver", "StableFluidSolver",
             "Main Solver for the Sable Fluid",
-            "StableShape", "Solver")
+            "StableShapeGPU", "Solver")
         {
         }
 
@@ -36,12 +37,14 @@ namespace StableShape
         /// </summary>
         protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
         {
-            pManager.AddIntegerParameter("Size3D", "Size3D", "An int list to store the size of grids.",GH_ParamAccess.list);
-            pManager.AddNumberParameter("Diffusion Rate", "Diffusion", "Diffusion Rate of Fluid", GH_ParamAccess.item, 0.0001);
-            pManager.AddNumberParameter("Viscocity Rate", "Viscocity", "Viscocity Rate of Fluid", GH_ParamAccess.item, 0.0001);
-            pManager.AddLineParameter("Forces", "Forces", "A list of lines represent the forces", GH_ParamAccess.list);
-            pManager.AddPointParameter("Dots", "Dots", "A list of Density Dots", GH_ParamAccess.list);
-            pManager.AddBooleanParameter("Reset", "Reset", "Reset the system", GH_ParamAccess.item, false);
+            pManager.AddIntegerParameter("Size3D", "S", "An int list to store the size of grids.",GH_ParamAccess.list);
+            pManager.AddNumberParameter("Diffusion Rate", "Di", "Diffusion Rate of Fluid", GH_ParamAccess.item, 0.0001);
+            pManager.AddNumberParameter("Viscocity Rate", "Vi", "Viscocity Rate of Fluid", GH_ParamAccess.item, 0.0001);
+            pManager.AddLineParameter("Forces", "F", "A list of lines represent the forces", GH_ParamAccess.list);
+            pManager.AddPointParameter("Dots", "D", "A list of Density Dots", GH_ParamAccess.list);
+            pManager.AddBooleanParameter("Reset", "Re", "Reset the system", GH_ParamAccess.item, false);
+            pManager.AddBooleanParameter("ShowVelocity","SV", "Show Velocity Field", GH_ParamAccess.item, false);
+            pManager.AddMeshParameter("Mesh", "M", "Mesh to be processed", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -49,9 +52,9 @@ namespace StableShape
         /// </summary>
         protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
         {
-            pManager.AddLineParameter("Display Lines", "Display Lines", "Lines to display the velocities", GH_ParamAccess.list);
-            pManager.AddNumberParameter("Density Field", "Density Field", "A list of number represent the density field", GH_ParamAccess.list);
-            pManager.AddVectorParameter("Velocity Field", "Velocity Field", "A list of vectors represent the velocity field", GH_ParamAccess.list);
+            pManager.AddLineParameter("Lines", "L", "Lines to display the velocities", GH_ParamAccess.list);
+            //pManager.AddNumberParameter("Density Field", "Density Field", "A list of number represent the density field", GH_ParamAccess.list);
+            pManager.AddMeshParameter("Mesh", "M", "Mesh Processed", GH_ParamAccess.item);
         }
 
         /// <summary>
@@ -66,6 +69,8 @@ namespace StableShape
             double viscocity = 0;
             List<Line> forces = new List<Line>();
             List<Point3d> dots = new List<Point3d>();
+            bool ShowVelocityField = false;
+            Mesh mesh = new Mesh();
             bool reset = false;
 
             if (!DA.GetDataList(0, size)) return;
@@ -74,6 +79,8 @@ namespace StableShape
             DA.GetDataList(3, forces);
             DA.GetDataList(4, dots);
             DA.GetData(5, ref reset);
+            DA.GetData(6, ref ShowVelocityField);
+            if (!DA.GetData(7, ref mesh)) return;
 
 
             if (reset || init)
@@ -81,30 +88,34 @@ namespace StableShape
                 reset = false;
                 init = false;
                 sf3 = new StableFluid3D(size[0], size[1], size[2], 0.1f, (float)diffusion, (float)viscocity);
-                if (dots.Count > 0)
+                meshSolver = new GpuMeshSolver(mesh);
+                if (forces.Count > 0 && dots.Count > 0)
                 {
                     sf3.AddDot(dots, 10f);
+                    sf3.AddForces(forces);
                 }
             }
-            if(lns.Count > 0)
-            {
-                lns.Clear();
-            }
 
-            sf3.AddForces(forces);
+            lns.Clear();
+            sf3.AddVelocity();
             sf3.Update();
 
-
-            if(Params.Output[0].Recipients.Count > 0)
+            for(int m = 0; m < 10; m++)
             {
-                List<Line> lns = sf3.DrawVector();
+                meshSolver.SimulateFrame(sf3);
+                Mesh remesh = meshSolver.ReconstructMesh();
+                DA.SetData(1, remesh);
             }
-            float[,,] density = sf3.GetDensity();
-            Vector3d[,,]velocity = sf3.GetVelocityField();
+
+            if (ShowVelocityField)
+            {
+                lns = sf3.DrawVector();
+            }
+
+            //float[,,] density = sf3.GetDensity();
+            //Vector3d[,,]velocity = sf3.GetVelocityField();
 
             DA.SetDataList(0, lns);
-            DA.SetDataList(1, density);
-            DA.SetDataList(2, velocity);
         }
 
         /// <summary>
@@ -120,6 +131,6 @@ namespace StableShape
         /// It is vital this Guid doesn't change otherwise old ghx files 
         /// that use the old ID will partially fail during loading.
         /// </summary>
-        public override Guid ComponentGuid => new Guid("c3147c78-92f1-4669-b5eb-d8d215ff87cf");
+        public override Guid ComponentGuid => new Guid("BF74E99E-A87B-4B74-9A87-0AECD3391ACD");
     }
 }

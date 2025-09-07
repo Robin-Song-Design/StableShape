@@ -3,9 +3,10 @@ using System.Collections.Generic;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
-using StableShape;
+using StableShapeGPU;
+using StableShapeGPU.Properties;
 
-namespace StableShape.Properties
+namespace StableShapeGPU
 {
     public class ScreenPoints : GH_Component
     {
@@ -15,14 +16,14 @@ namespace StableShape.Properties
         public ScreenPoints()
           : base("ScreenPoints", "SP",
               "Screen a variable rate of points",
-              "StableShape", "Postprocess")
+              "StableShapeGPU", "Postprocess")
         {
         }
 
         /// <summary>
         /// Registers all the input parameters for this component.
         /// </summary>
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddPointParameter("Points", "P", "Points to be screened", GH_ParamAccess.list);
             pManager.AddNumberParameter("Density", "D", "Density field", GH_ParamAccess.list);
@@ -32,7 +33,7 @@ namespace StableShape.Properties
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddPointParameter("Points", "P", "Screened Poitns", GH_ParamAccess.list);
         }
@@ -62,7 +63,7 @@ namespace StableShape.Properties
 
             for (int i = 0; i < density.Count; i++)
             {
-                if(density[i] > standard)
+                if (density[i] > standard)
                 {
                     screen_pts.Add(points[i]);
                 }
@@ -89,7 +90,7 @@ namespace StableShape.Properties
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("0AD16A56-48E5-450E-B1BC-6FF41F74E444"); }
+            get { return new Guid("0F6D1145-0907-48AA-95B2-AC8915C67CC9"); }
         }
     }
 }

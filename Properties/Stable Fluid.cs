@@ -8,12 +8,13 @@ using System.Threading.Tasks;
 using ComputeSharp;
 using ComputeSharp.__Internals;
 using ComputeSharp.Exceptions;
+using System.Threading;
 
-namespace StableShape.Properties
+namespace StableShapeGPU.Properties
 {
     public class StableFluid3D
     {
-        private int sizeX, sizeY, sizeZ;
+        internal int sizeX, sizeY, sizeZ;
         private GraphicsDevice gpuDevice;
 
         //private ReadOnlyTexture3D<float> u_force_buffer;
@@ -21,11 +22,10 @@ namespace StableShape.Properties
         //private ReadOnlyTexture3D<float> w_force_buffer;
 
         // use 3d array to store the field
-        private ReadWriteTexture3D<float> u,v,w; // velocity field
+        internal ReadWriteTexture3D<float> u,v,w; // velocity field
 
-        private ReadWriteTexture3D<float> u_prev, v_prev, w_prev; // previous velocity field
-
-        private ReadWriteTexture3D<float> u_add, v_add, w_add;
+        internal ReadWriteTexture3D<float> u_prev, v_prev, w_prev; // previous velocity field
+        private ReadWriteTexture3D<float> u_force_gpu, v_force_gpu, w_force_gpu; // force buffer
 
         private ReadWriteTexture3D<float> density;
         private ReadWriteTexture3D<float> density_prev;
@@ -59,10 +59,6 @@ namespace StableShape.Properties
             this.v_prev = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
             this.w_prev = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
 
-            this.u_add = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
-            this.v_add = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
-            this.w_add = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
-
             this.density = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
             this.density_prev = gpuDevice.AllocateReadWriteTexture3D<float>(sizeX, sizeY, sizeZ);
 
@@ -95,30 +91,33 @@ namespace StableShape.Properties
         }
         public void AddForces(List<Line> forces)
         {
-            // If there are no forces, do nothing.
+            // If there are no forces, we don't need to do anything.
             if (forces.Count == 0) return;
 
-            // 1. Create temporary "delta" arrays on the CPU, initialized to zero.
-            var u_force = new float[sizeX, sizeY, sizeZ];
-            var v_force = new float[sizeX, sizeY, sizeZ];
-            var w_force = new float[sizeX, sizeY, sizeZ];
+            // 1. Create temporary "delta" arrays on the CPU. They are automatically initialized to zero.
+            var u_force_cpu = new float[sizeX, sizeY, sizeZ];
+            var v_force_cpu = new float[sizeX, sizeY, sizeZ];
+            var w_force_cpu = new float[sizeX, sizeY, sizeZ];
             float scale = 0.8f;
 
-            // 2. Accumulate all force changes on the CPU. This is very fast.
+            // 2. Accumulate all force changes into the CPU arrays. This is very fast.
             foreach (var f in forces)
             {
                 int i = Clamp((int)f.From.X, 0, sizeX - 1);
                 int j = Clamp((int)f.From.Y, 0, sizeY - 1);
                 int k = Clamp((int)f.From.Z, 0, sizeZ - 1);
 
-                u_force[i, j, k] += (float)(f.To.X - f.From.X) * scale;
-                v_force[i, j, k] += (float)(f.To.Y - f.From.Y) * scale;
-                w_force[i, j, k] += (float)(f.To.Z - f.From.Z) * scale;
+                u_force_cpu[i, j, k] += (float)(f.To.X - f.From.X) * scale;
+                v_force_cpu[i, j, k] += (float)(f.To.Y - f.From.Y) * scale;
+                w_force_cpu[i, j, k] += (float)(f.To.Z - f.From.Z) * scale;
             }
 
-            u_add.CopyFrom(u_force);
-            v_add.CopyFrom(v_force);
-            w_add.CopyFrom(w_force);
+            // 3. Upload the CPU arrays to TEMPORARY GPU buffers.
+            // The 'using' statement ensures they are disposed of correctly after use.
+            u_force_gpu = gpuDevice.AllocateReadWriteTexture3D<float>(u_force_cpu);
+            v_force_gpu = gpuDevice.AllocateReadWriteTexture3D<float>(v_force_cpu);
+            w_force_gpu = gpuDevice.AllocateReadWriteTexture3D<float>(w_force_cpu);
+
         }
 
         public void AddDensity(int x, int y, int z, float amount)
@@ -129,10 +128,11 @@ namespace StableShape.Properties
             density.CopyFrom(density_cpu);
         }
 
-        public void AddVelocity(int x, int y, int z, float amount)
+        public void AddVelocity()
         {
-            // Same pattern for density
-            gpuDevice.For(sizeX, sizeY, sizeZ, new AddFieldShader(u, u_add));
+            gpuDevice.For(sizeX, sizeY, sizeZ, new AddFieldShader(this.u, u_force_gpu));
+            gpuDevice.For(sizeX, sizeY, sizeZ, new AddFieldShader(this.v, v_force_gpu));
+            gpuDevice.For(sizeX, sizeY, sizeZ, new AddFieldShader(this.w, w_force_gpu));
         }
 
         //To Set boundary for the fields

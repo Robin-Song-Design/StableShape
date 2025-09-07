@@ -1,11 +1,12 @@
 using Grasshopper;
 using Grasshopper.Kernel;
 using Rhino.Geometry;
+using StableShapeGPU.Properties;
 using System;
 using System.Collections.Generic;
 using System.Net;
 
-namespace StableShape.Properties
+namespace StableShapeGPU
 {
     public class StableSolver2D : GH_Component
     {
@@ -25,7 +26,7 @@ namespace StableShape.Properties
         public StableSolver2D()
           : base("StableFluidSolver2D", "StableFluidSolver2D",
             "Main Solver for the Sable Fluid 2D",
-            "StableShape", "Solver")
+            "StableShapeGPU", "Solver")
         {
         }
 
@@ -107,6 +108,6 @@ namespace StableShape.Properties
         /// It is vital this Guid doesn't change otherwise old ghx files 
         /// that use the old ID will partially fail during loading.
         /// </summary>
-        public override Guid ComponentGuid => new Guid("809B7CAC-E9E4-4FD2-9FA9-69E2F7E203B0");
+        public override Guid ComponentGuid => new Guid("B86E4FBB-B3BF-4053-B1A0-713B6B01460A");
     }
 }

@@ -3,35 +3,35 @@ using System.Collections.Generic;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
+using StableShapeGPU.Properties;
 
-namespace StableShape.Properties
+namespace StableShapeGPU
 {
-    public class DirectionForce : GH_Component
+    public class SequentialForce : GH_Component
     {
         /// <summary>
-        /// Initializes a new instance of the MyComponent2 class.
+        /// Initializes a new instance of the MyComponent1 class.
         /// </summary>
-        public DirectionForce()
-          : base("DicreateForce", "DF",
-              "Add forces that have direction",
-              "StableShape", "Preprocess")
+        public SequentialForce()
+          : base("SequentialForce", "SF",
+              "Add forces sequentially",
+              "StableShapeGPU", "Preprocess")
         {
         }
 
         /// <summary>
         /// Registers all the input parameters for this component.
         /// </summary>
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddCurveParameter("Curves", "C", "Curves to be processed", GH_ParamAccess.list);
             pManager.AddIntegerParameter("DivideCount", "D", "How many forces you want", GH_ParamAccess.item, 3);
-            pManager.AddVectorParameter("Direction", "Di", "Directions of forces", GH_ParamAccess.item);
         }
 
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddLineParameter("Lines", "L", "List of forces as lines", GH_ParamAccess.list);
             pManager.AddPointParameter("Dots", "D", "List of density dots as points", GH_ParamAccess.list);
@@ -43,27 +43,26 @@ namespace StableShape.Properties
         /// <param name="DA">The DA object is used to retrieve from inputs and store in outputs.</param>
         protected override void SolveInstance(IGH_DataAccess DA)
         {
-            List<Curve> crvs  =new List<Curve>();
+            List<Curve> crvs = new List<Curve>();
             int divideCount = 0;
-            Vector3d direction = Vector3d.Zero;
 
             DA.GetDataList(0, crvs);
             DA.GetData(1, ref divideCount);
-            DA.GetData(2, ref direction);
-            
+
             List<Line> lns = new List<Line>();
             List<Point3d> pts = new List<Point3d>();
-
             foreach (Curve curve in crvs)
             {
-                for (int i = 0; i <= divideCount; i++)
+                for (int i = 0; i < divideCount; i++)
                 {
                     var p0 = curve.PointAt(1.0 / divideCount * i);
-                    Line ln = new Line(p0, direction);
+                    var p1 = curve.PointAt(1.0 / divideCount * (i + 1));
+                    Line ln = new Line(p0, p1);
                     lns.Add(ln);
                     pts.Add(p0);
                 }
             }
+
             DA.SetDataList(0, lns);
             DA.SetDataList(1, pts);
         }
@@ -77,7 +76,7 @@ namespace StableShape.Properties
             {
                 //You can add image files to your project resources and access them like this:
                 // return Resources.IconForThisComponent;
-                return Resources.DF;
+                return Resources.SF;
             }
         }
 
@@ -86,7 +85,7 @@ namespace StableShape.Properties
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("E7ED317E-B888-4627-96CF-67A57C3D76A4"); }
+            get { return new Guid("9E16FF23-F245-4C0E-89E3-2C25025930BD"); }
         }
     }
 }

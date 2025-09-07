@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace StableShape.Properties {
+namespace StableShapeGPU.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]

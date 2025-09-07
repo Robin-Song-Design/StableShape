@@ -3,11 +3,11 @@ using Grasshopper.Kernel;
 using System;
 using System.Drawing;
 
-namespace StableShape
+namespace StableShapeGPU
 {
     public class StableShapeInfo : GH_AssemblyInfo
     {
-        public override string Name => "StableShape";
+        public override string Name => "StableShapeGPU";
 
         //Return a 24x24 pixel bitmap to represent this GHA library.
         public override Bitmap Icon => null;

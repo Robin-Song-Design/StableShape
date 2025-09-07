@@ -3,8 +3,9 @@ using System.Collections.Generic;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
+using StableShapeGPU.Properties;
 
-namespace StableShape.Properties
+namespace StableShapeGPU
 {
     public class Grid : GH_Component
     {
@@ -14,14 +15,14 @@ namespace StableShape.Properties
         public Grid()
           : base("Grid", "Grid",
               "Construct Fluid Grid",
-              "StableShape", "Preprocess")
+              "StableShapeGPU", "Preprocess")
         {
         }
 
         /// <summary>
         /// Registers all the input parameters for this component.
         /// </summary>
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddIntegerParameter("NumX ", "X", "num of X", GH_ParamAccess.item, 0);
             pManager.AddIntegerParameter("NumY ", "Y", "num of Y", GH_ParamAccess.item, 0);
@@ -31,7 +32,7 @@ namespace StableShape.Properties
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddPointParameter("Point", "P", "Points of the grids", GH_ParamAccess.list);
             pManager.AddNumberParameter("Size", "S", "Resolution of the grids", GH_ParamAccess.list);
@@ -84,7 +85,7 @@ namespace StableShape.Properties
                     }
                 }
             }
-                
+
             DA.SetDataList(0, pts);
             DA.SetDataList(1, size);
         }
@@ -107,7 +108,7 @@ namespace StableShape.Properties
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("AACD2FD5-7C0D-4969-B0BB-11D30CC48CA9"); }
+            get { return new Guid("45E91ED8-7953-42CC-A3A2-9D091528FF90"); }
         }
     }
 }

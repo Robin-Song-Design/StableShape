@@ -3,34 +3,36 @@ using System.Collections.Generic;
 
 using Grasshopper.Kernel;
 using Rhino.Geometry;
+using StableShapeGPU.Properties;
 
-namespace StableShape.Properties
+namespace StableShapeGPU
 {
-    public class SequentialForce : GH_Component
+    public class DirectionForce : GH_Component
     {
         /// <summary>
-        /// Initializes a new instance of the MyComponent1 class.
+        /// Initializes a new instance of the MyComponent2 class.
         /// </summary>
-        public SequentialForce()
-          : base("SequentialForce", "SF",
-              "Add forces sequentially",
-              "StableShape", "Preprocess")
+        public DirectionForce()
+          : base("DicreateForce", "DF",
+              "Add forces that have direction",
+              "StableShapeGPU", "Preprocess")
         {
         }
 
         /// <summary>
         /// Registers all the input parameters for this component.
         /// </summary>
-        protected override void RegisterInputParams(GH_Component.GH_InputParamManager pManager)
+        protected override void RegisterInputParams(GH_InputParamManager pManager)
         {
             pManager.AddCurveParameter("Curves", "C", "Curves to be processed", GH_ParamAccess.list);
             pManager.AddIntegerParameter("DivideCount", "D", "How many forces you want", GH_ParamAccess.item, 3);
+            pManager.AddVectorParameter("Direction", "Di", "Directions of forces", GH_ParamAccess.item);
         }
 
         /// <summary>
         /// Registers all the output parameters for this component.
         /// </summary>
-        protected override void RegisterOutputParams(GH_Component.GH_OutputParamManager pManager)
+        protected override void RegisterOutputParams(GH_OutputParamManager pManager)
         {
             pManager.AddLineParameter("Lines", "L", "List of forces as lines", GH_ParamAccess.list);
             pManager.AddPointParameter("Dots", "D", "List of density dots as points", GH_ParamAccess.list);
@@ -44,24 +46,25 @@ namespace StableShape.Properties
         {
             List<Curve> crvs = new List<Curve>();
             int divideCount = 0;
+            Vector3d direction = Vector3d.Zero;
 
             DA.GetDataList(0, crvs);
             DA.GetData(1, ref divideCount);
+            DA.GetData(2, ref direction);
 
             List<Line> lns = new List<Line>();
             List<Point3d> pts = new List<Point3d>();
+
             foreach (Curve curve in crvs)
             {
-                for (int i = 0; i < divideCount; i++)
+                for (int i = 0; i <= divideCount; i++)
                 {
                     var p0 = curve.PointAt(1.0 / divideCount * i);
-                    var p1 = curve.PointAt(1.0 / divideCount * (i + 1));
-                    Line ln = new Line(p0, p1);
+                    Line ln = new Line(p0, direction);
                     lns.Add(ln);
                     pts.Add(p0);
                 }
             }
-
             DA.SetDataList(0, lns);
             DA.SetDataList(1, pts);
         }
@@ -75,7 +78,7 @@ namespace StableShape.Properties
             {
                 //You can add image files to your project resources and access them like this:
                 // return Resources.IconForThisComponent;
-                return Resources.SF;
+                return Resources.DF;
             }
         }
 
@@ -84,7 +87,7 @@ namespace StableShape.Properties
         /// </summary>
         public override Guid ComponentGuid
         {
-            get { return new Guid("1A5B51F0-C387-4518-B7FF-D6EE303D2255"); }
+            get { return new Guid("624D8A4F-C76B-47E9-BBA3-D85F91CD380F"); }
         }
     }
 }

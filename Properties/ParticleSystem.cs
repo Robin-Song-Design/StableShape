@@ -5,15 +5,15 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StableShape.Properties
+namespace StableShapeGPU.Properties
 {
     public class Spring
     {
         public int vertex0; //index of vertex0 of the side
         public int vertex1; //index of vertex1 of the side
-        public double restlen;
+        public float restlen;
 
-        public Spring(int v0, int v1, double rest)
+        public Spring(int v0, int v1, float rest)
         {
             vertex0 = v0;
             vertex1 = v1;
@@ -31,13 +31,13 @@ namespace StableShape.Properties
         public bool clamp;
         public int index;
 
-        private static double timeStep = 0.1;//0.05;
-        private static double drag = 0.5;
+        internal static float timeStep = 0.1f;//0.05;
+        internal static float drag = 0.5f;
 
         //Particle System properties
-        public static double k = 0.5;
-        public static double damping = 0.95;
-        public static double mass = 1.0;
+        internal static float k = 5f;
+        internal static float damping = 0.95f;
+        internal static float mass = 1.0f;
 
         public Particle(Point3d pt)
         {
@@ -47,23 +47,23 @@ namespace StableShape.Properties
             forcecounter = 0;
         }
 
-        public void Move()
-        {
-            if (!clamp)
-            {
-                acceleration -= velocity * drag;
-                velocity += acceleration * timeStep;
-                velocity *= damping;
-                position += velocity * timeStep;
-            }
-            acceleration *= 0;
-            forcecounter = 0;
-        }
+        //public void Move()
+        //{
+        //    if (!clamp)
+        //    {
+        //        acceleration -= velocity * drag;
+        //        velocity += acceleration * timeStep;
+        //        velocity *= damping;
+        //        position += velocity * timeStep;
+        //    }
+        //    acceleration *= 0;
+        //    forcecounter = 0;
+        //}
 
-        public void ApplyForce(Vector3d force)
-        {
-            acceleration += force;
-            forcecounter++;
-        }
+        //public void ApplyForce(Vector3d force)
+        //{
+        //    acceleration += force;
+        //    forcecounter++;
+        //}
     }
 }

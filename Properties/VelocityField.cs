@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace StableShape.Properties
+namespace StableShapeGPU.Properties
 {
     public class VelocityField
     {
